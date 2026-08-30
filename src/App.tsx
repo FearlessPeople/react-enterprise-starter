@@ -245,7 +245,6 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
     [paletteOpen, setPaletteOpen] = useState(false),
     [menuOpen, setMenuOpen] = useState<string | null>(null),
     [profileOpen, setProfileOpen] = useState(false),
-    [profileSettingsOpen, setProfileSettingsOpen] = useState(false),
     [activePage, setActivePage] = useState(
       () => routePages[window.location.pathname] ?? "工作台"
     ),
@@ -434,7 +433,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
                 </DropdownMenuLabel>
                 <DropdownMenuItem
                   className="h-8 cursor-pointer rounded-md text-sm"
-                  onClick={() => setProfileSettingsOpen(true)}
+                  onClick={() => navigatePage("个人设置")}
                 >
                   <UserRound className="size-3.5" />
                   个人设置
@@ -453,27 +452,6 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
           </DropdownMenu>
         </div>
       </header>
-      <Dialog open={profileSettingsOpen} onOpenChange={setProfileSettingsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>个人设置</DialogTitle>
-            <DialogDescription>查看当前账户信息。</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 rounded-lg border p-4 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">账号</span>
-              <span>{user.username}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">姓名</span>
-              <span>{user.displayName || "未设置"}</span>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setProfileSettingsOpen(false)}>关闭</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       {activePage === "工作台" ? (
         <main className="mx-auto max-w-6xl p-4 lg:p-6">
           <div className="mb-5 flex items-start justify-between">
@@ -503,10 +481,109 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
             <QuickActions />
           </div>
         </main>
+      ) : activePage === "个人设置" ? (
+        <ProfilePage user={user} />
       ) : (
         <SystemPage key={activePage} page={activePage} />
       )}
     </div>
+  )
+}
+
+function ProfilePage({ user }: { user: User }) {
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [message, setMessage] = useState("")
+  const [saving, setSaving] = useState(false)
+  async function changePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSaving(true)
+    setMessage("")
+    try {
+      await apiFetch("/auth/password", {
+        method: "PUT",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+      setCurrentPassword("")
+      setNewPassword("")
+      setMessage("密码修改成功")
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : "修改失败")
+    } finally {
+      setSaving(false)
+    }
+  }
+  return (
+    <main className="mx-auto max-w-6xl p-4 lg:p-6">
+      <div className="mb-5">
+        <p className="text-xs text-muted-foreground">账户中心</p>
+        <h1 className="mt-1 text-xl font-semibold">个人设置</h1>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
+        <aside className="rounded-xl border bg-background p-5 shadow-sm">
+          <div className="mx-auto grid size-16 place-items-center rounded-full bg-primary/10 text-xl font-semibold text-primary">
+            {(user.displayName || user.username).slice(0, 1).toUpperCase()}
+          </div>
+          <h2 className="mt-3 text-center font-semibold">
+            {user.displayName || user.username}
+          </h2>
+          <p className="mt-1 text-center text-xs text-muted-foreground">
+            {user.username}
+          </p>
+          <div className="mt-6 border-t pt-4 text-xs text-muted-foreground">
+            账户信息
+          </div>
+        </aside>
+        <section className="space-y-4">
+          <div className="rounded-xl border bg-background p-5 shadow-sm">
+            <h2 className="font-semibold">基本资料</h2>
+            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <p className="text-xs text-muted-foreground">账号</p>
+                <p className="mt-1">{user.username}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">姓名</p>
+                <p className="mt-1">{user.displayName || "未设置"}</p>
+              </div>
+            </div>
+          </div>
+          <form
+            onSubmit={changePassword}
+            className="rounded-xl border bg-background p-5 shadow-sm"
+          >
+            <h2 className="font-semibold">修改密码</h2>
+            <div className="mt-4 grid gap-4 sm:max-w-md">
+              <label className="grid gap-2 text-sm">
+                当前密码
+                <Input
+                  required
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+              </label>
+              <label className="grid gap-2 text-sm">
+                新密码
+                <Input
+                  required
+                  minLength={8}
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </label>
+            </div>
+            {message && (
+              <p className="mt-3 text-sm text-muted-foreground">{message}</p>
+            )}
+            <Button className="mt-4" type="submit" disabled={saving}>
+              {saving ? "保存中…" : "保存密码"}
+            </Button>
+          </form>
+        </section>
+      </div>
+    </main>
   )
 }
 
