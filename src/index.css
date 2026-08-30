@@ -81,7 +81,80 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+    --header-gradient-start: oklch(0.86 0.12 264);
+    --header-gradient-end: oklch(0.97 0.035 264);
 }
+
+/* The color theme is independent from light/dark mode so users can personalize
+   the accent color without changing contrast or component semantics. */
+[data-color-theme="violet"] { --primary: oklch(0.51 0.24 292); --primary-foreground: oklch(0.98 0.01 292); --ring: oklch(0.62 0.2 292); --header-gradient-start: oklch(0.86 0.12 292); --header-gradient-end: oklch(0.97 0.035 292); }
+[data-color-theme="emerald"] { --primary: oklch(0.52 0.16 157); --primary-foreground: oklch(0.98 0.01 157); --ring: oklch(0.62 0.14 157); --header-gradient-start: oklch(0.86 0.09 157); --header-gradient-end: oklch(0.97 0.03 157); }
+[data-color-theme="orange"] { --primary: oklch(0.63 0.19 55); --primary-foreground: oklch(0.99 0.01 55); --ring: oklch(0.7 0.15 55); --header-gradient-start: oklch(0.88 0.13 55); --header-gradient-end: oklch(0.97 0.04 55); }
+
+.header-gradient {
+    background: var(--primary);
+    color: var(--primary-foreground);
+}
+
+.header-gradient .text-muted-foreground {
+    color: color-mix(in oklch, var(--primary-foreground) 72%, transparent);
+}
+
+.header-gradient button:hover {
+    background: color-mix(in oklch, var(--primary-foreground) 16%, transparent);
+    color: var(--primary-foreground);
+}
+
+.header-gradient .bg-muted {
+    background: color-mix(in oklch, var(--primary-foreground) 18%, transparent);
+    color: var(--primary-foreground);
+}
+
+.header-gradient .bg-primary\/15 {
+    background: color-mix(in oklch, var(--primary-foreground) 20%, transparent);
+    color: var(--primary-foreground);
+}
+
+/* Dropdown panels sit inside the colored header for hover menus. Reset the
+   inherited header text color so their light popover background stays legible. */
+.header-gradient .bg-popover {
+    color: var(--popover-foreground);
+}
+
+.header-gradient .bg-popover .text-muted-foreground {
+    color: var(--muted-foreground);
+}
+
+.header-gradient .bg-popover button:hover {
+    background: var(--muted);
+    color: var(--popover-foreground);
+}
+
+/* Shared visual language for every header dropdown. */
+.nav-popover {
+    border-radius: 0.5rem !important;
+    border: 1px solid var(--border) !important;
+    background: var(--popover) !important;
+    padding: 0.375rem !important;
+    color: var(--popover-foreground) !important;
+    box-shadow: 0 10px 25px -8px rgb(0 0 0 / 18%) !important;
+}
+
+.nav-popover .text-muted-foreground {
+    color: var(--muted-foreground) !important;
+}
+
+.nav-popover button:hover {
+    background: var(--muted) !important;
+    color: var(--popover-foreground) !important;
+}
+
+.theme-dot { width: 1.5rem; height: 1.5rem; border-radius: 9999px; border: 2px solid var(--background); cursor: pointer; }
+.header-gradient .theme-dot:hover { color: transparent; }
+.theme-blue, .header-gradient .theme-blue:hover { background: oklch(0.488 0.243 264.376); }
+.theme-violet, .header-gradient .theme-violet:hover { background: oklch(0.51 0.24 292); }
+.theme-emerald, .header-gradient .theme-emerald:hover { background: oklch(0.52 0.16 157); }
+.theme-orange, .header-gradient .theme-orange:hover { background: oklch(0.63 0.19 55); }
 
 .dark {
     --background: oklch(0.145 0 0);
@@ -115,7 +188,13 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+    --header-gradient-start: oklch(0.34 0.11 264);
+    --header-gradient-end: oklch(0.18 0.025 264);
 }
+
+.dark[data-color-theme="violet"] { --header-gradient-start: oklch(0.34 0.11 292); --header-gradient-end: oklch(0.18 0.025 292); }
+.dark[data-color-theme="emerald"] { --header-gradient-start: oklch(0.34 0.08 157); --header-gradient-end: oklch(0.18 0.025 157); }
+.dark[data-color-theme="orange"] { --header-gradient-start: oklch(0.36 0.11 55); --header-gradient-end: oklch(0.18 0.025 55); }
 
 @layer base {
   * {
