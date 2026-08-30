@@ -20,6 +20,14 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
@@ -237,6 +245,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
     [paletteOpen, setPaletteOpen] = useState(false),
     [menuOpen, setMenuOpen] = useState<string | null>(null),
     [profileOpen, setProfileOpen] = useState(false),
+    [profileSettingsOpen, setProfileSettingsOpen] = useState(false),
     [activePage, setActivePage] = useState(
       () => routePages[window.location.pathname] ?? "工作台"
     ),
@@ -423,7 +432,10 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
                 <DropdownMenuLabel className="px-2 py-1.5 text-[11px]">
                   账户设置
                 </DropdownMenuLabel>
-                <DropdownMenuItem className="h-8 cursor-pointer rounded-md text-sm">
+                <DropdownMenuItem
+                  className="h-8 cursor-pointer rounded-md text-sm"
+                  onClick={() => setProfileSettingsOpen(true)}
+                >
                   <UserRound className="size-3.5" />
                   个人设置
                 </DropdownMenuItem>
@@ -441,6 +453,27 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
           </DropdownMenu>
         </div>
       </header>
+      <Dialog open={profileSettingsOpen} onOpenChange={setProfileSettingsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>个人设置</DialogTitle>
+            <DialogDescription>查看当前账户信息。</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 rounded-lg border p-4 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">账号</span>
+              <span>{user.username}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">姓名</span>
+              <span>{user.displayName || "未设置"}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setProfileSettingsOpen(false)}>关闭</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {activePage === "工作台" ? (
         <main className="mx-auto max-w-6xl p-4 lg:p-6">
           <div className="mb-5 flex items-start justify-between">
@@ -485,6 +518,10 @@ function SystemPage({ page }: { page: string }) {
   const [pageNumber, setPageNumber] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [total, setTotal] = useState(0)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingRow, setEditingRow] = useState<SystemRow | null>(null)
+  const [formValues, setFormValues] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
   useEffect(() => {
     let cancelled = false
     apiFetch<{ items?: SystemRow[] } | SystemRow[]>(
@@ -507,6 +544,48 @@ function SystemPage({ page }: { page: string }) {
       cancelled = true
     }
   }, [config.endpoint, pageNumber, pageSize])
+  function openEditor(row?: SystemRow) {
+    setEditingRow(row ?? null)
+    setFormValues(
+      Object.fromEntries(
+        config.columns.map(([key]) => [key, String(row?.[key] ?? "")])
+      )
+    )
+    setDialogOpen(true)
+  }
+  async function saveRow(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSaving(true)
+    try {
+      const id = editingRow?.id
+      await apiFetch(`${config.endpoint}${id ? `/${id}` : ""}`, {
+        method: id ? "PUT" : "POST",
+        body: JSON.stringify(formValues),
+      })
+      setDialogOpen(false)
+      setPageNumber(1)
+      setLoading(true)
+      const data = await apiFetch<
+        { items?: SystemRow[]; total?: number } | SystemRow[]
+      >(`${config.endpoint}?page=1&pageSize=${pageSize}`)
+      setRows(Array.isArray(data) ? data : (data.items ?? []))
+      setTotal(Array.isArray(data) ? data.length : (data.total ?? 0))
+    } finally {
+      setSaving(false)
+      setLoading(false)
+    }
+  }
+  async function deleteRow(row: SystemRow) {
+    if (!row.id || !window.confirm("确定删除这条记录吗？")) return
+    setLoading(true)
+    try {
+      await apiFetch(`${config.endpoint}/${row.id}`, { method: "DELETE" })
+      setRows((current) => current.filter((item) => item.id !== row.id))
+      setTotal((value) => Math.max(0, value - 1))
+    } finally {
+      setLoading(false)
+    }
+  }
   return (
     <main className="mx-auto max-w-6xl p-4 lg:p-6">
       <div className="mb-5 flex items-center justify-between">
@@ -517,7 +596,11 @@ function SystemPage({ page }: { page: string }) {
             统一管理系统基础数据与操作记录。
           </p>
         </div>
-        <Button size="sm" disabled={page.includes("日志")}>
+        <Button
+          size="sm"
+          disabled={page.includes("日志")}
+          onClick={() => openEditor()}
+        >
           <span className="mr-1 text-base">+</span>新建
         </Button>
       </div>
@@ -566,13 +649,19 @@ function SystemPage({ page }: { page: string }) {
                       <TableCell key={key}>{String(row[key] ?? "-")}</TableCell>
                     ))}
                     <TableCell className="text-right">
-                      <Button variant="link" size="sm" className="h-7 px-1">
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="h-7 px-1"
+                        onClick={() => openEditor(row)}
+                      >
                         编辑
                       </Button>
                       <Button
                         variant="link"
                         size="sm"
                         className="h-7 px-1 text-destructive"
+                        onClick={() => deleteRow(row)}
                       >
                         删除
                       </Button>
@@ -739,6 +828,46 @@ function SystemPage({ page }: { page: string }) {
             )
           })()}
       </div>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingRow ? `编辑${page}` : `新建${page}`}
+            </DialogTitle>
+            <DialogDescription>请填写基础信息后保存。</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={saveRow} className="space-y-4">
+            {config.columns.map(([key, label]) => (
+              <label key={key} className="grid gap-2 text-sm font-medium">
+                {label}
+                <Input
+                  required={key !== "description"}
+                  value={formValues[key] ?? ""}
+                  onChange={(event) =>
+                    setFormValues((current) => ({
+                      ...current,
+                      [key]: event.target.value,
+                    }))
+                  }
+                  placeholder={`请输入${label}`}
+                />
+              </label>
+            ))}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+              >
+                取消
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "保存中…" : "保存"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }
