@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from "react"
-import type { FormEvent } from "react"
+import type { FormEvent, ReactNode } from "react"
 import {
   Activity,
   ArrowUpRight,
@@ -8,11 +8,13 @@ import {
   ChevronDown,
   ChevronRight,
   CircleHelp,
+  KeyRound,
   LogOut,
   Menu,
   Moon,
   Palette,
   Pencil,
+  Search,
   Settings2,
   ShieldCheck,
   Sun,
@@ -76,7 +78,24 @@ import {
   type SystemRow,
 } from "@/config/navigation"
 
-type User = { id: string; username: string; displayName?: string }
+type Permission = { id: string; code: string; name: string; module?: string }
+type Role = {
+  id: string
+  code: string
+  name: string
+  description?: string
+  status?: "active" | "disabled"
+  isSystem?: boolean
+  permissions?: Permission[]
+}
+type User = {
+  id: string
+  username: string
+  displayName?: string
+  email?: string | null
+  status?: "active" | "disabled"
+  roles?: Role[]
+}
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -597,7 +616,104 @@ function ProfilePage({ user, page }: { user: User; page: string }) {
   )
 }
 
+function UsersPage() {
+  const [rows, setRows] = useState<User[]>([])
+  const [roles, setRoles] = useState<Role[]>([])
+  const [keyword, setKeyword] = useState("")
+  const [status, setStatus] = useState("all")
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [dialog, setDialog] = useState<"form" | "password" | "roles" | null>(null)
+  const [editing, setEditing] = useState<User | null>(null)
+  const [form, setForm] = useState({ username: "", displayName: "", email: "", password: "", status: "active" })
+  const [password, setPassword] = useState("")
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
+
+  async function load() {
+    setLoading(true); setError("")
+    try {
+      const query = new URLSearchParams({ page: "1", pageSize: "20" })
+      if (keyword.trim()) query.set("keyword", keyword.trim())
+      if (status !== "all") query.set("status", status)
+      const [userData, roleData] = await Promise.all([
+        apiFetch<{ items?: User[]; total?: number }>(`/users?${query}`),
+        apiFetch<{ items?: Role[] } | Role[]>("/roles?page=1&pageSize=100"),
+      ])
+      setRows(userData.items ?? [])
+      setRoles(Array.isArray(roleData) ? roleData : roleData.items ?? [])
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "加载用户失败") }
+    finally { setLoading(false) }
+  }
+  // Initial data fetch is intentionally one-shot; search runs on explicit submit.
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+  useEffect(() => { void load() }, [])
+  function openForm(row?: User) {
+    setEditing(row ?? null)
+    setForm({ username: row?.username ?? "", displayName: row?.displayName ?? "", email: row?.email ?? "", password: "", status: row?.status ?? "active" })
+    setDialog("form")
+  }
+  async function save(event: FormEvent) {
+    event.preventDefault(); setSaving(true)
+    try {
+      const body = editing ? { displayName: form.displayName, email: form.email || null, status: form.status } : { ...form, email: form.email || null, roleIds: [] }
+      await apiFetch(editing ? `/users/${editing.id}` : "/users", { method: editing ? "PUT" : "POST", body: JSON.stringify(body) })
+      setDialog(null); await load()
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "保存失败") }
+    finally { setSaving(false) }
+  }
+  async function resetPassword(event: FormEvent) {
+    event.preventDefault(); if (!editing) return; setSaving(true)
+    try { await apiFetch(`/users/${editing.id}/password`, { method: "PUT", body: JSON.stringify({ password }) }); setDialog(null); setPassword("") }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "重置密码失败") }
+    finally { setSaving(false) }
+  }
+  async function assignRoles(event: FormEvent) {
+    event.preventDefault(); if (!editing) return; setSaving(true)
+    try { await apiFetch(`/users/${editing.id}/roles`, { method: "PUT", body: JSON.stringify({ roleIds: selectedRoles }) }); setDialog(null); await load() }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "角色分配失败") }
+    finally { setSaving(false) }
+  }
+  async function remove(row: User) {
+    if (!window.confirm(`确定删除用户“${row.displayName || row.username}”吗？`)) return
+    try { await apiFetch(`/users/${row.id}`, { method: "DELETE" }); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : "删除失败") }
+  }
+  return <EntityPage title="用户管理" description="管理系统用户，维护账号状态与角色归属。" action="新增用户" onAction={() => openForm()} search={keyword} onSearch={setKeyword} status={status} onStatus={setStatus} onSubmit={() => void load()} error={error}>
+    <Table><TableHeader><TableRow><TableHead>账号</TableHead><TableHead>姓名</TableHead><TableHead>邮箱</TableHead><TableHead>角色</TableHead><TableHead>状态</TableHead><TableHead>操作</TableHead></TableRow></TableHeader><TableBody>{loading ? <TableRow><TableCell colSpan={6} className="h-28 text-center"><Spinner className="mx-auto text-primary" /></TableCell></TableRow> : rows.length ? rows.map((row) => <TableRow key={row.id}><TableCell className="font-medium">{row.username}</TableCell><TableCell>{row.displayName || "—"}</TableCell><TableCell>{row.email || "—"}</TableCell><TableCell>{row.roles?.map((role) => role.name).join("、") || "未分配"}</TableCell><TableCell><StatusBadge status={row.status} /></TableCell><TableCell><ActionButton onClick={() => openForm(row)}>编辑</ActionButton><ActionButton onClick={() => { setEditing(row); setPassword(""); setDialog("password") }}><KeyRound className="size-3" />重置密码</ActionButton><ActionButton onClick={() => { setEditing(row); setSelectedRoles(row.roles?.map((role) => role.id) ?? []); setDialog("roles") }}>分配角色</ActionButton><ActionButton danger onClick={() => void remove(row)}>删除</ActionButton></TableCell></TableRow>) : <TableRow><TableCell colSpan={6} className="h-28 text-center text-muted-foreground">暂无用户数据</TableCell></TableRow>}</TableBody></Table>
+    <Dialog open={dialog === "form"} onOpenChange={(open) => !open && setDialog(null)}><DialogContent><DialogHeader><DialogTitle>{editing ? "编辑用户" : "新增用户"}</DialogTitle><DialogDescription>{editing ? "更新用户资料与账号状态。" : "创建账号后可继续分配角色。"}</DialogDescription></DialogHeader><form onSubmit={save} className="space-y-4"><Field label="账号" value={form.username} disabled={Boolean(editing)} onChange={(value) => setForm({ ...form, username: value })} required={!editing} /><Field label="姓名" value={form.displayName} onChange={(value) => setForm({ ...form, displayName: value })} /><Field label="邮箱" type="email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} /><Field label="初始密码" type="password" value={form.password} disabled={Boolean(editing)} onChange={(value) => setForm({ ...form, password: value })} required={!editing} hint="至少 10 位" /><StatusSelect value={form.status} onChange={(value) => setForm({ ...form, status: value })} /><DialogFooter><Button type="button" variant="outline" onClick={() => setDialog(null)}>取消</Button><Button disabled={saving}>{saving ? "保存中…" : "保存用户"}</Button></DialogFooter></form></DialogContent></Dialog>
+    <Dialog open={dialog === "password"} onOpenChange={(open) => !open && setDialog(null)}><DialogContent><DialogHeader><DialogTitle>重置用户密码</DialogTitle><DialogDescription>为 {editing?.displayName || editing?.username} 设置一个新的登录密码。</DialogDescription></DialogHeader><form onSubmit={resetPassword} className="space-y-4"><Field label="新密码" type="password" value={password} onChange={setPassword} required hint="10–72 位" /><DialogFooter><Button type="button" variant="outline" onClick={() => setDialog(null)}>取消</Button><Button disabled={saving}>{saving ? "提交中…" : "确认重置"}</Button></DialogFooter></form></DialogContent></Dialog>
+    <Dialog open={dialog === "roles"} onOpenChange={(open) => !open && setDialog(null)}><DialogContent><DialogHeader><DialogTitle>分配角色</DialogTitle><DialogDescription>选择 {editing?.displayName || editing?.username} 可以访问的角色。</DialogDescription></DialogHeader><form onSubmit={assignRoles} className="space-y-2">{roles.map((role) => <label key={role.id} className="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm hover:bg-muted/60"><input type="checkbox" checked={selectedRoles.includes(role.id)} onChange={(event) => setSelectedRoles((current) => event.target.checked ? [...current, role.id] : current.filter((id) => id !== role.id))} /> <span className="flex-1">{role.name}<small className="ml-2 text-muted-foreground">{role.code}</small></span></label>)}<DialogFooter><Button type="button" variant="outline" onClick={() => setDialog(null)}>取消</Button><Button disabled={saving}>{saving ? "保存中…" : "保存角色"}</Button></DialogFooter></form></DialogContent></Dialog>
+  </EntityPage>
+}
+
+function RolesPage() {
+  const [rows, setRows] = useState<Role[]>([]), [permissions, setPermissions] = useState<Permission[]>([]), [keyword, setKeyword] = useState(""), [loading, setLoading] = useState(true), [error, setError] = useState(""), [dialog, setDialog] = useState<"form" | "permissions" | null>(null), [editing, setEditing] = useState<Role | null>(null), [form, setForm] = useState({ code: "", name: "", description: "", status: "active" }), [selected, setSelected] = useState<string[]>([]), [saving, setSaving] = useState(false)
+  async function load() { setLoading(true); try { const [roleData, permissionData] = await Promise.all([apiFetch<{ items?: Role[] }>(`/roles?page=1&pageSize=100&keyword=${encodeURIComponent(keyword)}`), apiFetch<Permission[]>('/permissions')]); setRows(roleData.items ?? []); setPermissions(permissionData) } catch (reason) { setError(reason instanceof Error ? reason.message : "加载角色失败") } finally { setLoading(false) } }
+  // Initial data fetch is intentionally one-shot; search runs on explicit submit.
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+  useEffect(() => { void load() }, [])
+  function openForm(row?: Role) { setEditing(row ?? null); setForm({ code: row?.code ?? "", name: row?.name ?? "", description: row?.description ?? "", status: row?.status ?? "active" }); setDialog("form") }
+  async function save(event: FormEvent) { event.preventDefault(); setSaving(true); try { await apiFetch(editing ? `/roles/${editing.id}` : '/roles', { method: editing ? 'PUT' : 'POST', body: JSON.stringify(form) }); setDialog(null); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : "保存失败") } finally { setSaving(false) } }
+  async function savePermissions(event: FormEvent) { event.preventDefault(); if (!editing) return; setSaving(true); try { await apiFetch(`/roles/${editing.id}/permissions`, { method: 'PUT', body: JSON.stringify({ permissionIds: selected }) }); setDialog(null); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : "权限分配失败") } finally { setSaving(false) } }
+  async function remove(row: Role) { if (row.isSystem || !window.confirm(`确定删除角色“${row.name}”吗？`)) return; try { await apiFetch(`/roles/${row.id}`, { method: 'DELETE' }); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : "删除失败") } }
+  return <EntityPage title="角色与权限" description="管理系统角色及其权限范围，控制不同岗位的访问边界。" action="新增角色" onAction={() => openForm()} search={keyword} onSearch={setKeyword} onSubmit={() => void load()} error={error}><Table><TableHeader><TableRow><TableHead>角色名称</TableHead><TableHead>角色编码</TableHead><TableHead>类型</TableHead><TableHead>权限点</TableHead><TableHead>状态</TableHead><TableHead>操作</TableHead></TableRow></TableHeader><TableBody>{loading ? <TableRow><TableCell colSpan={6} className="h-28 text-center"><Spinner className="mx-auto text-primary" /></TableCell></TableRow> : rows.length ? rows.map((row) => <TableRow key={row.id}><TableCell className="font-medium">{row.name}</TableCell><TableCell className="font-mono text-xs">{row.code}</TableCell><TableCell><span className="rounded bg-muted px-2 py-1 text-xs">{row.isSystem ? "系统内置" : "自定义"}</span></TableCell><TableCell>{row.permissions?.length ?? 0} 项</TableCell><TableCell><StatusBadge status={row.status} /></TableCell><TableCell><ActionButton onClick={() => openForm(row)}>编辑</ActionButton><ActionButton onClick={() => { setEditing(row); setSelected(row.permissions?.map((permission) => permission.id) ?? []); setDialog("permissions") }}>分配权限</ActionButton><ActionButton danger disabled={row.isSystem} onClick={() => void remove(row)}>删除</ActionButton></TableCell></TableRow>) : <TableRow><TableCell colSpan={6} className="h-28 text-center text-muted-foreground">暂无角色数据</TableCell></TableRow>}</TableBody></Table><Dialog open={dialog === "form"} onOpenChange={(open) => !open && setDialog(null)}><DialogContent><DialogHeader><DialogTitle>{editing ? "编辑角色" : "新增角色"}</DialogTitle><DialogDescription>角色名称和状态会立即影响权限管理。</DialogDescription></DialogHeader><form onSubmit={save} className="space-y-4"><Field label="角色编码" value={form.code} disabled={Boolean(editing)} onChange={(value) => setForm({ ...form, code: value })} /><Field label="角色名称" value={form.name} onChange={(value) => setForm({ ...form, name: value })} required /><Field label="描述" value={form.description} onChange={(value) => setForm({ ...form, description: value })} /><StatusSelect value={form.status} onChange={(value) => setForm({ ...form, status: value })} /><DialogFooter><Button type="button" variant="outline" onClick={() => setDialog(null)}>取消</Button><Button disabled={saving}>{saving ? "保存中…" : "保存角色"}</Button></DialogFooter></form></DialogContent></Dialog><Dialog open={dialog === "permissions"} onOpenChange={(open) => !open && setDialog(null)}><DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>分配权限</DialogTitle><DialogDescription>为“{editing?.name}”选择权限点，保存后立即生效。</DialogDescription></DialogHeader><form onSubmit={savePermissions} className="grid max-h-[55vh] gap-2 overflow-y-auto sm:grid-cols-2">{permissions.map((permission) => <label key={permission.id} className="flex items-start gap-3 rounded-lg border px-3 py-2.5 text-sm"><input type="checkbox" checked={selected.includes(permission.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, permission.id] : current.filter((id) => id !== permission.id))} /><span><span className="block font-medium">{permission.name}</span><small className="text-muted-foreground">{permission.module || "系统"} · {permission.code}</small></span></label>)}<DialogFooter className="sm:col-span-2"><Button type="button" variant="outline" onClick={() => setDialog(null)}>取消</Button><Button disabled={saving}>{saving ? "保存中…" : "保存权限"}</Button></DialogFooter></form></DialogContent></Dialog></EntityPage>
+}
+
+function EntityPage({ title, description, action, onAction, search, onSearch, status, onStatus, onSubmit, error, children }: { title: string; description: string; action: string; onAction: () => void; search: string; onSearch: (value: string) => void; status?: string; onStatus?: (value: string) => void; onSubmit: () => void; error: string; children: ReactNode }) {
+  return <main className="mx-auto max-w-6xl p-4 lg:p-7"><div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-xs font-medium text-primary">系统设置 / 权限中心</p><h1 className="mt-2 text-2xl font-semibold tracking-tight">{title}</h1><p className="mt-1 text-sm text-muted-foreground">{description}</p></div><Button size="sm" onClick={onAction}>+ {action}</Button></div><div className="overflow-hidden rounded-xl border bg-background shadow-sm"><div className="flex flex-wrap items-center gap-2 border-b bg-muted/15 p-4"><form className="relative" onSubmit={(event) => { event.preventDefault(); onSubmit() }}><Search className="absolute top-2.5 left-2.5 size-3.5 text-muted-foreground" /><Input value={search} onChange={(event) => onSearch(event.target.value)} className="h-9 w-64 pl-8 text-sm" placeholder={`搜索${title}`} /></form>{status && onStatus && <select value={status} onChange={(event) => onStatus(event.target.value)} className="h-9 rounded-md border bg-background px-3 text-sm"><option value="all">状态：全部</option><option value="active">启用</option><option value="disabled">停用</option></select>}<Button variant="outline" size="sm" onClick={onSubmit}>查询</Button>{error && <span className="text-sm text-destructive">{error}</span>}</div><div className="overflow-x-auto">{children}</div></div></main>
+}
+function Field({ label, value, onChange, type = "text", disabled, required, hint }: { label: string; value: string; onChange: (value: string) => void; type?: string; disabled?: boolean; required?: boolean; hint?: string }) { return <label className="grid gap-1.5 text-sm font-medium">{label}{hint && <span className="ml-1 text-xs font-normal text-muted-foreground">({hint})</span>}<Input required={required} disabled={disabled} type={type} value={value} onChange={(event) => onChange(event.target.value)} /></label> }
+function StatusSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) { return <label className="grid gap-1.5 text-sm font-medium">状态<select value={value} onChange={(event) => onChange(event.target.value)} className="h-9 rounded-md border bg-background px-3 text-sm"><option value="active">启用</option><option value="disabled">停用</option></select></label> }
+function StatusBadge({ status }: { status?: string }) { return <span className={`rounded px-2 py-1 text-xs ${status === "disabled" ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"}`}>{status === "disabled" ? "停用" : "启用"}</span> }
+function ActionButton({ children, onClick, danger, disabled }: { children: ReactNode; onClick: () => void; danger?: boolean; disabled?: boolean }) { return <Button variant="link" size="sm" disabled={disabled} className={`h-7 gap-1 px-1.5 text-xs ${danger ? "text-destructive" : "text-primary"}`} onClick={onClick}>{children}</Button> }
+
 function SystemPage({ page }: { page: string }) {
+  if (page === "用户管理") return <UsersPage />
+  if (page === "角色与权限") return <RolesPage />
+  return <GenericSystemPage page={page} />
+}
+
+function GenericSystemPage({ page }: { page: string }) {
   const config = pageConfig[page]
   const [rows, setRows] = useState<SystemRow[]>([])
   const [loading, setLoading] = useState(true)
