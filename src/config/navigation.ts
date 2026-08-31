@@ -13,7 +13,8 @@ export const systemPages = [
 
 export const pageRoutes: Record<string, string> = {
   工作台: "/",
-  个人设置: "/profile",
+  个人资料: "/profile",
+  账户密码: "/profile/password",
   用户管理: "/system/users",
   角色与权限: "/system/roles",
   菜单管理: "/system/menus",

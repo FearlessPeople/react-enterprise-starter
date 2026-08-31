@@ -6,11 +6,13 @@ import {
   BarChart3,
   Bell,
   ChevronDown,
+  ChevronRight,
   CircleHelp,
   LogOut,
   Menu,
   Moon,
   Palette,
+  Pencil,
   Settings2,
   ShieldCheck,
   Sun,
@@ -433,10 +435,10 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
                 </DropdownMenuLabel>
                 <DropdownMenuItem
                   className="h-8 cursor-pointer rounded-md text-sm"
-                  onClick={() => navigatePage("个人设置")}
+                  onClick={() => navigatePage("个人资料")}
                 >
                   <UserRound className="size-3.5" />
-                  个人设置
+                  个人资料
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator className="my-1" />
@@ -481,8 +483,8 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
             <QuickActions />
           </div>
         </main>
-      ) : activePage === "个人设置" ? (
-        <ProfilePage user={user} />
+      ) : activePage === "个人资料" || activePage === "账户密码" ? (
+        <ProfilePage user={user} page={activePage} />
       ) : (
         <SystemPage key={activePage} page={activePage} />
       )}
@@ -490,7 +492,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
   )
 }
 
-function ProfilePage({ user }: { user: User }) {
+function ProfilePage({ user, page }: { user: User; page: string }) {
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [message, setMessage] = useState("")
@@ -513,76 +515,84 @@ function ProfilePage({ user }: { user: User }) {
       setSaving(false)
     }
   }
+  const sections = [{
+    label: "个人",
+    items: [["个人资料", UserRound], ["账户密码", ShieldCheck]],
+  }] as const
   return (
-    <main className="mx-auto max-w-6xl p-4 lg:p-6">
-      <div className="mb-5">
-        <p className="text-xs text-muted-foreground">账户中心</p>
-        <h1 className="mt-1 text-xl font-semibold">个人设置</h1>
-      </div>
-      <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
-        <aside className="rounded-xl border bg-background p-5 shadow-sm">
-          <div className="mx-auto grid size-16 place-items-center rounded-full bg-primary/10 text-xl font-semibold text-primary">
-            {(user.displayName || user.username).slice(0, 1).toUpperCase()}
-          </div>
-          <h2 className="mt-3 text-center font-semibold">
-            {user.displayName || user.username}
-          </h2>
-          <p className="mt-1 text-center text-xs text-muted-foreground">
-            {user.username}
-          </p>
-          <div className="mt-6 border-t pt-4 text-xs text-muted-foreground">
-            账户信息
-          </div>
-        </aside>
-        <section className="space-y-4">
-          <div className="rounded-xl border bg-background p-5 shadow-sm">
-            <h2 className="font-semibold">基本资料</h2>
-            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <p className="text-xs text-muted-foreground">账号</p>
-                <p className="mt-1">{user.username}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">姓名</p>
-                <p className="mt-1">{user.displayName || "未设置"}</p>
-              </div>
+    <main className="settings-page">
+      <aside className="settings-sidebar">
+        <nav aria-label="设置导航" className="settings-nav">
+          {sections.map((section) => (
+            <div className="settings-nav-group" key={section.label}>
+              <p>{section.label}</p>
+              {section.items.map(([label, Icon]) => (
+                <button
+                  key={label}
+                  className={`settings-nav-item ${label === page ? "is-active" : ""}`}
+                  onClick={() => {
+                    const route = pageRoutes[label]
+                    window.history.pushState({}, "", route)
+                    window.dispatchEvent(new PopStateEvent("popstate"))
+                  }}
+                >
+                  <Icon className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
+                  <span>{label}</span>
+                </button>
+              ))}
             </div>
-          </div>
-          <form
-            onSubmit={changePassword}
-            className="rounded-xl border bg-background p-5 shadow-sm"
-          >
-            <h2 className="font-semibold">修改密码</h2>
-            <div className="mt-4 grid gap-4 sm:max-w-md">
-              <label className="grid gap-2 text-sm">
-                当前密码
-                <Input
-                  required
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                />
-              </label>
-              <label className="grid gap-2 text-sm">
-                新密码
-                <Input
-                  required
-                  minLength={8}
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-              </label>
-            </div>
-            {message && (
-              <p className="mt-3 text-sm text-muted-foreground">{message}</p>
-            )}
-            <Button className="mt-4" type="submit" disabled={saving}>
-              {saving ? "保存中…" : "保存密码"}
-            </Button>
-          </form>
-        </section>
-      </div>
+          ))}
+        </nav>
+      </aside>
+      <section className="settings-content">
+        <div className="settings-content-inner">
+          <header className="settings-heading">
+            <p>个人设置</p>
+            <h1>{page}</h1>
+            <span>{page === "个人资料" ? "管理您的个人信息和账户资料" : "保护您的账户安全"}</span>
+          </header>
+
+          {page === "个人资料" ? (
+            <section className="settings-section">
+              <h2>基本资料</h2>
+              <div className="settings-profile-list">
+                <div className="settings-profile-row">
+                  <span><strong>账号</strong><small>用于登录系统的账号名称</small></span>
+                  <span className="settings-profile-value">{user.username}<Pencil className="size-4" aria-hidden="true" /></span>
+                </div>
+                <div className="settings-profile-row">
+                  <span><strong>姓名</strong><small>在工作台和账户菜单中显示的名称</small></span>
+                  <span className="settings-profile-value">{user.displayName || "未设置"}<Pencil className="size-4" aria-hidden="true" /></span>
+                </div>
+              </div>
+              <h2 className="settings-security-title">账户安全</h2>
+              <button
+                className="settings-security-link"
+                onClick={() => {
+                  window.history.pushState({}, "", pageRoutes["账户密码"])
+                  window.dispatchEvent(new PopStateEvent("popstate"))
+                }}
+              >
+                <span><strong>账户密码</strong><small>定期更新密码可以有效保护您的账户安全</small></span>
+                <span>修改密码 <ChevronRight className="size-4" /></span>
+              </button>
+            </section>
+          ) : (
+            <section className="settings-section settings-password-section">
+              <h2>修改密码</h2>
+              <form onSubmit={changePassword} className="settings-password-card">
+                <div><p className="settings-row-title">更新登录密码</p><p className="settings-row-description">建议使用至少 8 位，并包含字母和数字的密码。</p></div>
+                <div className="settings-password-fields">
+                  <Input required type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="当前密码" aria-label="当前密码" />
+                  <Input required minLength={8} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="新密码（至少 8 位）" aria-label="新密码" />
+                  <Button type="submit" disabled={saving}>{saving ? "保存中…" : "保存密码"}</Button>
+                </div>
+                {message && <p className="settings-form-message">{message}</p>}
+              </form>
+            </section>
+          )}
+        </div>
+      </section>
     </main>
   )
 }
