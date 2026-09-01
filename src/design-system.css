@@ -1,0 +1,331 @@
+/* Sypher Ops design system
+ * A clear, high-signal operating surface for enterprise data.
+ * Keep product components on semantic variables; do not hardcode palette values.
+ */
+
+:root {
+  /* Color roles — blue navigation shell, cool workspace, clear ink */
+  --background: #f1f3f7;
+  --foreground: #151918;
+  --card: #ffffff;
+  --card-foreground: #151918;
+  --popover: #ffffff;
+  --popover-foreground: #151918;
+  --primary: #316ff4;
+  --primary-foreground: #ffffff;
+  --secondary: #e9edf5;
+  --secondary-foreground: #263044;
+  --muted: #f5f7fa;
+  --muted-foreground: #707887;
+  --accent: #edf3ff;
+  --accent-foreground: #2457c8;
+  --destructive: #df5d73;
+  --border: #e1e5ec;
+  --input: #d3d9e3;
+  --ring: #316ff4;
+
+  /* Chart roles — positive, caution, exception, neutral */
+  --chart-1: #25b968;
+  --chart-2: #9ddc39;
+  --chart-3: #f0d22f;
+  --chart-4: #e75d7b;
+  --chart-5: #316ff4;
+
+  /* Shape, depth, and layout */
+  --radius: 0.375rem;
+  --shadow-panel: 0 1px 2px rgb(21 25 24 / 4%);
+  --shadow-popover: 0 16px 32px rgb(21 25 24 / 12%), 0 2px 6px rgb(21 25 24 / 6%);
+  --layout-max: 90rem;
+  --layout-gutter: clamp(1rem, 2.2vw, 2rem);
+  --grid-unit: 0.25rem;
+}
+
+/* The blue theme is the product default; the existing picker can still
+   personalize the navigation and action color through semantic tokens. */
+[data-color-theme="violet"] {
+  --primary: #7658d9;
+  --primary-foreground: #ffffff;
+  --accent: #f1edff;
+  --accent-foreground: #5f43bd;
+  --ring: #7658d9;
+}
+
+[data-color-theme="emerald"] {
+  --primary: #159b72;
+  --primary-foreground: #ffffff;
+  --accent: #e8f8f1;
+  --accent-foreground: #087553;
+  --ring: #159b72;
+}
+
+[data-color-theme="orange"] {
+  --primary: #df8a28;
+  --primary-foreground: #ffffff;
+  --accent: #fff4e5;
+  --accent-foreground: #a85d08;
+  --ring: #df8a28;
+}
+
+.dark {
+  --background: #151918;
+  --foreground: #f4f7f4;
+  --card: #1d2420;
+  --card-foreground: #f4f7f4;
+  --popover: #1d2420;
+  --popover-foreground: #f4f7f4;
+  --primary: #6f9bff;
+  --primary-foreground: #081d4a;
+  --secondary: #26302b;
+  --secondary-foreground: #eef5ef;
+  --muted: #202824;
+  --muted-foreground: #a5b0a8;
+  --accent: #192d59;
+  --accent-foreground: #9db9ff;
+  --border: #303846;
+  --input: #3b4557;
+  --ring: #6f9bff;
+  --chart-1: #63dc93;
+  --chart-2: #b7e83e;
+  --chart-3: #f0d22f;
+  --chart-4: #ef7890;
+  --chart-5: #dce7df;
+}
+
+.dark[data-color-theme="violet"] {
+  --primary: #a893f0;
+  --primary-foreground: #21164c;
+  --accent: #30245b;
+  --accent-foreground: #c7bbff;
+  --ring: #a893f0;
+}
+
+.dark[data-color-theme="emerald"] {
+  --primary: #58d1aa;
+  --primary-foreground: #082d22;
+  --accent: #173c31;
+  --accent-foreground: #7fe0bd;
+  --ring: #58d1aa;
+}
+
+.dark[data-color-theme="orange"] {
+  --primary: #f4b45d;
+  --primary-foreground: #3b2106;
+  --accent: #4a3218;
+  --accent-foreground: #ffd092;
+  --ring: #f4b45d;
+}
+
+@layer base {
+  html {
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  body {
+    background: var(--background);
+    letter-spacing: -0.006em;
+  }
+
+  :where(h1, h2, h3, h4) {
+    text-wrap: balance;
+    letter-spacing: -0.035em;
+  }
+
+  :where(code, kbd, .tabular-nums, [data-numeric="true"]) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :where(button, a, input, select, textarea):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Primitives used by dashboard and future feature pages. */
+.sypher-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow-panel);
+}
+
+.sypher-divider { border-color: var(--border); }
+
+.sypher-kicker {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.sypher-data {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+}
+
+.sypher-popover {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-popover);
+}
+
+/* App shell */
+.app-shell {
+  min-height: 100svh;
+  background: var(--background);
+}
+
+.header-gradient {
+  min-height: 2.75rem;
+  min-width: 0;
+  overflow: visible;
+  border-color: color-mix(in srgb, #ffffff 18%, transparent);
+  background: var(--primary);
+  box-shadow: 0 1px 0 rgb(8 47 120 / 12%), 0 4px 14px rgb(36 87 200 / 10%);
+}
+
+/* Profile settings: the same blue system, without the legacy warm tint. */
+.settings-page {
+  border-color: var(--border);
+  border-radius: 0.75rem;
+  background: var(--card);
+  box-shadow: var(--shadow-panel);
+}
+
+.settings-sidebar {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--muted) 76%, var(--background));
+}
+
+.settings-nav-item {
+  border-radius: 0.375rem;
+}
+
+.settings-nav-item.is-active {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.settings-content {
+  background: var(--card);
+}
+
+.settings-profile-list,
+.settings-security-link,
+.settings-list-card,
+.settings-permission-card {
+  border-color: var(--border);
+}
+
+.settings-permission-card,
+.settings-list-card {
+  border-radius: 0.5rem;
+  background: var(--card);
+}
+
+.header-gradient > :first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: visible;
+}
+
+.header-gradient > :first-child > :first-child {
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.header-gradient > :first-child > :first-child span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-gradient > :last-child {
+  flex: 0 0 auto;
+}
+
+.header-gradient nav {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.header-gradient .nav-popover {
+  max-height: min(22rem, calc(100svh - 5rem));
+  overflow-y: auto;
+}
+
+.header-gradient nav > div > button {
+  border-radius: 0.25rem;
+  color: rgb(255 255 255 / 76%);
+  outline: none !important;
+}
+
+.header-gradient nav > div > button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.header-gradient nav > div > button:hover,
+.header-gradient nav > div > button:focus-visible {
+  background: rgb(255 255 255 / 12%);
+  color: #ffffff;
+}
+
+.header-gradient nav > div > button.bg-muted {
+  background: rgb(255 255 255 / 16%);
+  color: #ffffff;
+}
+
+.header-gradient nav > div > button.bg-muted:focus-visible {
+  outline: none !important;
+}
+
+.data-panel {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--card);
+  box-shadow: var(--shadow-panel);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge::before {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: currentColor;
+  content: "";
+}
+
+.status-badge.is-active { background: color-mix(in srgb, #25b968 12%, transparent); color: #16844a; }
+.status-badge.is-disabled { background: color-mix(in srgb, #df5d73 12%, transparent); color: #bc4056; }
+.trend-positive { color: #16844a; }
+.trend-negative { color: #bc4056; }
+
+@media (max-width: 700px) {
+  .header-gradient { min-height: 2.75rem; }
+  .header-gradient { padding-inline: 0.75rem; }
+  .header-gradient > :first-child { gap: 0.5rem; }
+  .header-gradient > :first-child > :first-child { display: none; }
+  .header-gradient nav { max-width: 52vw; overflow-x: auto; }
+  .header-gradient nav::-webkit-scrollbar { display: none; }
+  .header-gradient nav > div > button { flex: 0 0 auto; }
+  .header-gradient > :last-child > :is(:nth-child(1), :nth-child(2), :nth-child(3)) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

@@ -24,6 +24,14 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -320,9 +328,9 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
     onLogout()
   }
   return (
-    <div className="min-h-svh bg-muted/35">
+    <div className="app-shell">
       <header
-        className={`header-gradient sticky top-0 z-20 flex h-12 items-center justify-between border-b px-4 backdrop-blur-md transition-transform duration-300 ease-out will-change-transform lg:px-6 ${headerVisible ? "translate-y-0" : "-translate-y-full"}`}
+        className={`header-gradient sticky top-0 z-20 flex h-11 items-center justify-between border-b px-4 backdrop-blur-md transition-transform duration-300 ease-out will-change-transform lg:px-6 ${headerVisible ? "translate-y-0" : "-translate-y-full"}`}
       >
         <div className="flex items-center gap-5">
           <div className="flex items-center gap-2">
@@ -382,7 +390,7 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
               <Palette className="size-3.5" />
             </Button>
             {paletteOpen && (
-              <div className="absolute top-9 right-0 z-30 w-48 rounded-lg border bg-popover p-3 shadow-xl">
+              <div className="sypher-popover absolute top-9 right-0 z-30 w-48 bg-popover p-3">
                 <p className="mb-2 px-1 text-xs font-medium text-muted-foreground">
                   主题颜色
                 </p>
@@ -700,11 +708,11 @@ function RolesPage() {
 }
 
 function EntityPage({ title, description, action, onAction, search, onSearch, status, onStatus, onSubmit, error, children }: { title: string; description: string; action: string; onAction: () => void; search: string; onSearch: (value: string) => void; status?: string; onStatus?: (value: string) => void; onSubmit: () => void; error: string; children: ReactNode }) {
-  return <main className="mx-auto max-w-6xl p-4 lg:p-7"><div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-xs font-medium text-primary">系统设置 / 权限中心</p><h1 className="mt-2 text-2xl font-semibold tracking-tight">{title}</h1><p className="mt-1 text-sm text-muted-foreground">{description}</p></div><Button size="sm" onClick={onAction}>+ {action}</Button></div><div className="overflow-hidden rounded-xl border bg-background shadow-sm"><div className="flex flex-wrap items-center gap-2 border-b bg-muted/15 p-4"><form className="relative" onSubmit={(event) => { event.preventDefault(); onSubmit() }}><Search className="absolute top-2.5 left-2.5 size-3.5 text-muted-foreground" /><Input value={search} onChange={(event) => onSearch(event.target.value)} className="h-9 w-64 pl-8 text-sm" placeholder={`搜索${title}`} /></form>{status && onStatus && <select value={status} onChange={(event) => onStatus(event.target.value)} className="h-9 rounded-md border bg-background px-3 text-sm"><option value="all">状态：全部</option><option value="active">启用</option><option value="disabled">停用</option></select>}<Button variant="outline" size="sm" onClick={onSubmit}>查询</Button>{error && <span className="text-sm text-destructive">{error}</span>}</div><div className="overflow-x-auto">{children}</div></div></main>
+  return <main className="mx-auto max-w-6xl p-4 lg:p-7"><div className="mb-6 flex items-end justify-between gap-4"><div><Breadcrumb className="mb-3"><BreadcrumbList><BreadcrumbItem><BreadcrumbLink href="/">系统设置</BreadcrumbLink></BreadcrumbItem><BreadcrumbSeparator /><BreadcrumbItem><BreadcrumbPage>{title}</BreadcrumbPage></BreadcrumbItem></BreadcrumbList></Breadcrumb><h1 className="text-2xl font-semibold tracking-tight">{title}</h1><p className="mt-1 text-sm text-muted-foreground">{description}</p></div><Button size="sm" onClick={onAction}>+ {action}</Button></div><div className="data-panel overflow-hidden"><div className="flex flex-wrap items-center gap-2 border-b bg-muted/15 p-4"><form className="relative" onSubmit={(event) => { event.preventDefault(); onSubmit() }}><Search className="absolute top-2.5 left-2.5 size-3.5 text-muted-foreground" /><Input value={search} onChange={(event) => onSearch(event.target.value)} className="h-9 w-64 pl-8 text-sm" placeholder={`搜索${title}`} /></form>{status && onStatus && <select value={status} onChange={(event) => onStatus(event.target.value)} className="h-9 rounded-md border bg-background px-3 text-sm"><option value="all">状态：全部</option><option value="active">启用</option><option value="disabled">停用</option></select>}<Button variant="outline" size="sm" onClick={onSubmit}>查询</Button>{error && <span className="text-sm text-destructive">{error}</span>}</div><div className="overflow-x-auto">{children}</div></div></main>
 }
 function Field({ label, value, onChange, type = "text", disabled, required, hint }: { label: string; value: string; onChange: (value: string) => void; type?: string; disabled?: boolean; required?: boolean; hint?: string }) { return <label className="grid gap-1.5 text-sm font-medium">{label}{hint && <span className="ml-1 text-xs font-normal text-muted-foreground">({hint})</span>}<Input required={required} disabled={disabled} type={type} value={value} onChange={(event) => onChange(event.target.value)} /></label> }
 function StatusSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) { return <label className="grid gap-1.5 text-sm font-medium">状态<select value={value} onChange={(event) => onChange(event.target.value)} className="h-9 rounded-md border bg-background px-3 text-sm"><option value="active">启用</option><option value="disabled">停用</option></select></label> }
-function StatusBadge({ status }: { status?: string }) { return <span className={`rounded px-2 py-1 text-xs ${status === "disabled" ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"}`}>{status === "disabled" ? "停用" : "启用"}</span> }
+function StatusBadge({ status }: { status?: string }) { return <span className={`status-badge ${status === "disabled" ? "is-disabled" : "is-active"}`}>{status === "disabled" ? "停用" : "启用"}</span> }
 function ActionButton({ children, onClick, danger, disabled }: { children: ReactNode; onClick: () => void; danger?: boolean; disabled?: boolean }) { return <Button variant="link" size="sm" disabled={disabled} className={`h-7 gap-1 px-1.5 text-xs ${danger ? "text-destructive" : "text-primary"}`} onClick={onClick}>{children}</Button> }
 
 function SystemPage({ page }: { page: string }) {
@@ -793,7 +801,17 @@ function GenericSystemPage({ page }: { page: string }) {
     <main className="mx-auto max-w-6xl p-4 lg:p-6">
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <p className="text-xs text-muted-foreground">系统设置</p>
+          <Breadcrumb className="mb-3">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/">系统设置</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{page}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
           <h1 className="mt-1 text-xl font-semibold tracking-tight">{page}</h1>
           <p className="mt-1 text-xs text-muted-foreground">
             统一管理系统基础数据与操作记录。
@@ -807,7 +825,7 @@ function GenericSystemPage({ page }: { page: string }) {
           <span className="mr-1 text-base">+</span>新建
         </Button>
       </div>
-      <div className="rounded-xl border bg-background shadow-sm">
+      <div className="data-panel">
         <div className="flex items-center justify-between border-b p-4">
           <Input className="h-8 max-w-xs" placeholder={`搜索${page}...`} />
         </div>
@@ -1092,7 +1110,7 @@ function Stats() {
       {cards.map(({ label, value, change, icon: Icon }) => (
         <div
           key={label}
-          className="rounded-xl border bg-background p-5 shadow-sm"
+          className="data-panel p-5"
         >
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">{label}</p>
@@ -1101,7 +1119,7 @@ function Stats() {
             </div>
           </div>
           <p className="mt-4 text-2xl font-semibold tracking-tight">{value}</p>
-          <p className="mt-2 flex items-center gap-1 text-xs text-emerald-600">
+          <p className="trend-positive mt-2 flex items-center gap-1 text-xs">
             <ArrowUpRight className="size-3" />
             {change}
             <span className="text-muted-foreground">较上周</span>
@@ -1113,7 +1131,7 @@ function Stats() {
 }
 function ActivityCard() {
   return (
-    <section className="rounded-xl border bg-background p-5 shadow-sm">
+    <section className="data-panel p-5">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-semibold">访问趋势</h2>
@@ -1136,9 +1154,9 @@ function ActivityCard() {
           >
             <div
               style={{ height: `${height}%` }}
-              className="w-full rounded-t-md bg-primary/15 transition group-hover:bg-primary/40"
+              className="w-full rounded-t-sm bg-primary/15 transition group-hover:bg-primary/40"
             />
-            <div className="absolute inset-x-0 bottom-0 h-1/3 rounded-t-md bg-gradient-to-t from-primary/20 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-1/3 rounded-t-sm bg-primary/10" />
           </div>
         ))}
       </div>
@@ -1154,7 +1172,7 @@ function ActivityCard() {
 }
 function QuickActions() {
   return (
-    <section className="rounded-xl border bg-background p-5 shadow-sm">
+    <section className="data-panel p-5">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-semibold">快捷入口</h2>
